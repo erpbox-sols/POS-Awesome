@@ -113,6 +113,7 @@
                 :prefix="currencySymbol(pos_profile.currency)" :label="frappe._('Loan Amount')" readonly dense outlined
                 background-color="white" hide-details></v-text-field>
             </v-col>
+
             <v-col cols="6">
               <!-- Add your text field here -->
               <v-text-field v-model="formLoan.loan_id" color="primary" :label="frappe._('Loan Id')" readonly dense
