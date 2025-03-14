@@ -67,43 +67,52 @@
         </v-row>
         <v-divider></v-divider>
         <div v-if="is_cashback">
-          <v-row class="pyments px-1 py-0" v-for="payment in invoice_doc.payments" :key="payment.name">
-            <!-- First Column -->
-            <v-col cols="6" v-if="!is_mpesa_c2b_payment(payment)">
-              <v-text-field dense outlined color="primary" :label="frappe._(payment.mode_of_payment)"
-                background-color="white" hide-details :value="formtCurrency(payment.amount)"
-                @change="setFormatedCurrency(payment, 'amount', null, true, $event)" :rules="[isNumber]"
-                :prefix="currencySymbol(invoice_doc.currency)" @focus="set_rest_amount(payment.idx)"
-                :readonly="invoice_doc.is_return ? true : false"></v-text-field>
-            </v-col>
+          <v-row class="pyments px-1 py-0" v-for="(payment, index) in invoice_doc.payments" :key="payment.name">
+  <!-- First Column -->
+  <v-col cols="6" v-if="!is_mpesa_c2b_payment(payment)">
+    <v-text-field dense outlined color="primary" :label="frappe._(payment.mode_of_payment)"
+      background-color="white" hide-details :value="formtCurrency(payment.amount)"
+      @change="setFormatedCurrency(payment, 'amount', null, true, $event)" :rules="[isNumber]"
+      :prefix="currencySymbol(invoice_doc.currency)" @focus="set_rest_amount(payment.idx)"
+      :readonly="invoice_doc.is_return ? true : false"></v-text-field>
+  </v-col>
 
-            <!-- Second Column -->
-            <v-col v-if="!is_mpesa_c2b_payment(payment)"
-              :cols="6 ? (payment.type != 'Phone' || payment.amount == 0 || !request_payment_field) && !is_mpesa_c2b_payment(payment) : 3">
-              <v-btn block class="" color="primary" dark @click="set_full_amount(payment.idx)">
-                {{ payment.mode_of_payment }}
-              </v-btn>
-            </v-col>
+  <!-- Second Column and 2.2 Column -->
+  <v-col v-if="!is_mpesa_c2b_payment(payment)" cols="6">
+    <v-row>
+      <v-col :cols="payment.type == 'Phone' && payment.amount > 0 && request_payment_field ? 8 : 12">
+  <v-btn block class="" color="primary" dark @click="set_full_amount(payment.idx)">
+    {{ payment.mode_of_payment }}
+  </v-btn>
+</v-col>
+<!-- Fourth Column -->
+<v-col v-if="payment.type == 'Phone' && payment.amount > 0 && request_payment_field" :cols="4">
+  <v-btn block class="" color="success" dark :disabled="payment.amount == 0"
+    @click="(phone_dialog = true), (payment.amount = flt(payment.amount, 0))">
+    {{ __("Request") }}
+  </v-btn>
+</v-col>
+<v-col v-if="index === 0" :cols="12">
+  <v-btn block class="" color="success" dark @click="openDialog">
+    {{ __("Credit Pezesha") }}
+  </v-btn>
+</v-col>
+    </v-row>
 
-            <!-- Third Column -->
-            <v-col v-if="is_mpesa_c2b_payment(payment)" :cols="12" class="pl-3">
-              <v-btn block class="" color="success" dark @click="mpesa_c2b_dialg(payment)">
-                {{ __(`Get Payments ${payment.mode_of_payment}`) }}
-              </v-btn>
-            </v-col>
+  
+  </v-col>
 
-            <!-- Fourth Column -->
-            <v-col v-if="
-                payment.type == 'Phone' &&
-                payment.amount > 0 &&
-                request_payment_field
-              " :cols="3" class="pl-1">
-              <v-btn block class="" color="success" dark :disabled="payment.amount == 0"
-                @click="(phone_dialog = true), (payment.amount = flt(payment.amount, 0))">
-                {{ __("Request") }}
-              </v-btn>
-            </v-col>
-          </v-row>
+  <!-- Third Column -->
+  <v-col v-if="is_mpesa_c2b_payment(payment)" :cols="12" class="pl-3">
+    <v-btn block class="" color="success" dark @click="mpesa_c2b_dialg(payment)">
+      {{ __(`Get Payments ${payment.mode_of_payment}`) }}
+    </v-btn>
+  </v-col>
+
+
+</v-row>
+
+       
 
           <!-- Credit Pezesha button -->
           <v-row v-if="is_cashback">
@@ -113,7 +122,7 @@
                 :prefix="currencySymbol(pos_profile.currency)" :label="frappe._('Loan Amount')" readonly dense outlined
                 background-color="white" hide-details></v-text-field>
             </v-col>
-
+          
             <v-col cols="6">
               <!-- Add your text field here -->
               <v-text-field v-model="formLoan.loan_id" color="primary" :label="frappe._('Loan Id')" readonly dense
@@ -124,11 +133,7 @@
               <v-text-field v-model="formLoan.loan_status" color="primary" :label="frappe._('Status')" readonly dense
                 outlined background-color="white" hide-details></v-text-field>
             </v-col>
-            <v-col cols="6" class="text-left"> <!-- Adjusted class to align right -->
-              <v-btn block class="pa-0" color="success" dark @click="openDialog">
-                {{ __("Credit Pezesha") }}
-              </v-btn>
-            </v-col>
+
             <v-col cols="6" class="text-left"> <!-- Adjusted class to align right -->
               <v-btn block class="pa-0" color="success" dark @click="pezeshaLoanStatus">
                 {{ __("Pezesha Loan Status") }}
