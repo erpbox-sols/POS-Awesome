@@ -180,18 +180,6 @@
                     {{ payment.mode_of_payment }}
                   </v-btn>
                 </v-col>
-               
-                <v-col v-if="index === 0" :cols="12">
-                  <v-btn
-                    block
-                    class=""
-                    color="success"
-                    dark
-                    @click="openDialog"
-                  >
-                    {{ __("Credit Pezesha") }}
-                  </v-btn>
-                </v-col>
 
                  <!-- Fourth Column -->
              <v-col
@@ -208,6 +196,19 @@
                 {{ __("Request") }}
               </v-btn>
           
+                </v-col>
+
+                               
+                <v-col v-if="index === 0" :cols="12">
+                  <v-btn
+                    block
+                    class=""
+                    color="success"
+                    dark
+                    @click="openDialog"
+                  >
+                    {{ __("Credit Pezesha") }}
+                  </v-btn>
                 </v-col>
               </v-row>
             </v-col>
