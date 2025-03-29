@@ -216,7 +216,7 @@
             
 
             <!-- Third Column -->
-            <!-- <v-col v-if="is_mpesa_c2b_payment(payment)" :cols="12" class="pl-3">
+            <v-col v-if="payment.mode_of_payment === 'Mpesa-C2B- Mlango Nandi', '510008.99 - Mpesa-C2B Kimilili - VFL','510008.100 - Mpesa-C2B Nandi Hill - VFL','Mpesa-C2B Webuye'" :cols="12" class="pl-3">
               <v-btn
                 block
                 class=""
@@ -226,7 +226,7 @@
               >
                 {{ __(`Get Payments ${payment.mode_of_payment}`) }}
               </v-btn>
-            </v-col> -->
+            </v-col>
           </v-row>
 
           <!-- Credit Pezesha button -->
