@@ -61,6 +61,7 @@
 <script>
 import { evntBus } from '../../bus';
 import UpdateCustomer from './UpdateCustomer.vue';
+
 export default {
   data: () => ({
     pos_profile: '',
@@ -68,6 +69,8 @@ export default {
     customer: '',
     readonly: false,
     customer_info: {},
+    customersLoaded: false,
+    loadingCustomers: false,
   }),
 
   components: {
@@ -75,33 +78,41 @@ export default {
   },
 
   methods: {
-    get_customer_names() {
-      const vm = this;
-      if (this.customers.length > 0) {
-        return;
+    async get_customer_names(force = false) {
+      // Only fetch if not loaded or forced
+      if (this.customersLoaded && !force) return;
+      if (this.loadingCustomers) return;
+      this.loadingCustomers = true;
+
+      // Try localStorage first if enabled
+      if (this.pos_profile.posa_local_storage && localStorage.customer_storage && !force) {
+        try {
+          this.customers = JSON.parse(localStorage.getItem('customer_storage'));
+          this.customersLoaded = true;
+          this.loadingCustomers = false;
+          return;
+        } catch (e) {
+          // fallback to API
+        }
       }
-      if (vm.pos_profile.posa_local_storage && localStorage.customer_storage) {
-        vm.customers = JSON.parse(localStorage.getItem('customer_storage'));
-      }
-      frappe.call({
-        method: 'posawesome.posawesome.api.posapp.get_customer_names',
-        args: {
-          pos_profile: this.pos_profile.pos_profile,
-        },
-        callback: function (r) {
-          if (r.message) {
-            vm.customers = r.message;
-            console.info('loadCustomers');
-            if (vm.pos_profile.posa_local_storage) {
-              localStorage.setItem('customer_storage', '');
-              localStorage.setItem(
-                'customer_storage',
-                JSON.stringify(r.message)
-              );
-            }
+
+      try {
+        const r = await frappe.call({
+          method: 'posawesome.posawesome.api.posapp.get_customer_names',
+          args: {
+            pos_profile: this.pos_profile.pos_profile,
+          },
+        });
+        if (r && r.message) {
+          this.customers = r.message;
+          this.customersLoaded = true;
+          if (this.pos_profile.posa_local_storage) {
+            localStorage.setItem('customer_storage', JSON.stringify(r.message));
           }
-        },
-      });
+        }
+      } finally {
+        this.loadingCustomers = false;
+      }
     },
     new_customer() {
       evntBus.$emit('open_update_customer', null);
@@ -110,9 +121,8 @@ export default {
       evntBus.$emit('open_update_customer', this.customer_info);
     },
     customFilter(item, queryText, itemText) {
-      const textOne = item.customer_name
-        ? item.customer_name.toLowerCase()
-        : '';
+      // All filtering is done client-side, no API call on typing
+      const textOne = item.customer_name ? item.customer_name.toLowerCase() : '';
       const textTwo = item.tax_id ? item.tax_id.toLowerCase() : '';
       const textThree = item.email_id ? item.email_id.toLowerCase() : '';
       const textFour = item.mobile_no ? item.mobile_no.toLowerCase() : '';
@@ -127,12 +137,15 @@ export default {
         textFifth.indexOf(searchText) > -1
       );
     },
+    clearCustomerCache() {
+      this.customersLoaded = false;
+      localStorage.removeItem('customer_storage');
+      this.get_customer_names(true);
+    }
   },
 
-  computed: {},
-
-  created: function () {
-    this.$nextTick(function () {
+  created() {
+    this.$nextTick(() => {
       evntBus.$on('register_pos_profile', (pos_profile) => {
         this.pos_profile = pos_profile;
         this.get_customer_names();
@@ -154,7 +167,7 @@ export default {
         this.customer_info = data;
       });
       evntBus.$on('fetch_customer_details', () => {
-        this.get_customer_names();
+        this.clearCustomerCache();
       });
     });
   },

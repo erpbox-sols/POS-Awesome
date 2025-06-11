@@ -1,8 +1,10 @@
 <template>
   <v-app class="container1">
     <v-main>
-      <Navbar @changePage="setPage($event)"></Navbar>
-      <component v-bind:is="page" class="mx-4 md-4"></component>
+      <Navbar @changePage="setPage"></Navbar>
+      <keep-alive>
+        <component :is="page" class="mx-4 md-4" />
+      </keep-alive>
     </v-main>
   </v-app>
 </template>
@@ -13,35 +15,43 @@ import POS from './components/pos/Pos.vue';
 import Payments from './components/payments/Pay.vue';
 
 export default {
-  data: function () {
-    return {
-      page: 'POS',
-    };
-  },
+  name: "Home",
   components: {
     Navbar,
     POS,
     Payments,
   },
+  data() {
+    return {
+      page: 'POS',
+      frappeNavRemoved: false,
+    };
+  },
   methods: {
     setPage(page) {
-      this.page = page;
+      if (this.page !== page) {
+        this.page = page;
+      }
     },
-    remove_frappe_nav() {
-      this.$nextTick(function () {
-        $('.page-head').remove();
-        $('.navbar.navbar-default.navbar-fixed-top').remove();
+    removeFrappeNav() {
+      // Only remove once for performance
+      if (this.frappeNavRemoved) return;
+      this.frappeNavRemoved = true;
+      this.$nextTick(() => {
+        const head = document.querySelector('.page-head');
+        if (head) head.remove();
+        const nav = document.querySelector('.navbar.navbar-default.navbar-fixed-top');
+        if (nav) nav.remove();
       });
     },
   },
   mounted() {
-    this.remove_frappe_nav();
+    this.removeFrappeNav();
   },
-  updated() {},
-  created: function () {
-    setTimeout(() => {
-      this.remove_frappe_nav();
-    }, 1000);
+  created() {
+     setTimeout(() => {
+      this.removeFrappeNav();
+    }, 500);
   },
 };
 </script>
