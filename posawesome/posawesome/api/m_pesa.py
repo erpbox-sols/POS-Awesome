@@ -16,7 +16,6 @@ def get_token(app_key, app_secret, base_url):
 
     return r.json()["access_token"]
 
-
 @frappe.whitelist(allow_guest=True)
 def confirmation(**kwargs):
     try:
@@ -55,7 +54,7 @@ def validation(**kwargs):
 def get_mpesa_mode_of_payment(company):
     modes = frappe.get_all(
         "Mpesa C2B Register URL",
-        filters={"company": company, "register_status": "Success"},
+        filters={"company": company},
         fields=["mode_of_payment"],
     )
     modes_of_payment = []

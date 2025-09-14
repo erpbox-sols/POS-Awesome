@@ -37,6 +37,8 @@
                   outlined
                   hide-details
                   clearable
+                  readonly
+                  disabled
                   background-color="white"
                   v-model="pos_profile_search"
                   :items="pos_profiles_list"
@@ -149,6 +151,24 @@
                 </p>
               </v-col>
             </v-row>
+            <v-row align="center" no-gutters class="mb-1">
+              <v-col md="4" cols="12">
+                <v-select
+                  dense
+                  outlined
+                  hide-details
+                  clearable
+                  readonly
+                  disabled
+                  background-color="white"
+                  v-model="pos_profile_search"
+                  :items="pos_profiles_list"
+                  item-value="name"
+                  label="Select POS Profile"
+                ></v-select>
+              </v-col>
+            </v-row>
+              <v-col> </v-col>
             <v-row align="center" no-gutters class="mb-1">
               <v-col md="4" cols="12" class="mr-1">
                 <v-text-field

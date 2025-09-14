@@ -1,5 +1,72 @@
 <template>
   <div>
+    <v-dialog v-model="dialognotSuccessful" max-width="500px">
+      <v-card>
+        <v-card-title>{{ dialogtitle }}</v-card-title>
+        <v-card-text>{{ dialogMessage }}</v-card-text>
+        <v-card-actions>
+          <v-btn color="error" @click="closeNotSuccessfulDialog">Close</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="dialogSuccessful" max-width="500px">
+      <v-card>
+        <v-card-title>Loan Confirmation Request Pending Approval</v-card-title>
+        <v-card-actions>
+          <v-btn color="success" @click="closeSuccessfulDialog">Close</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="dialogVisible" max-width="500px">
+      <v-card>
+        <v-card-title>Loan Application</v-card-title>
+        <v-card-text>
+          <!-- Dialog content goes here -->
+          <!-- Add your form fields here -->
+          <v-text-field
+            v-model="formData.pezesha_customer_id"
+            label="Pezesha Customer"
+            readonly
+          ></v-text-field>
+          <v-text-field
+            v-model="formData.pezesha_channel_id"
+            label="Pezesha Channel ID"
+            readonly
+          ></v-text-field>
+          <v-text-field
+            v-model="formData.amount"
+            v-on:change="changeHandler"
+            label="Amount"
+          ></v-text-field>
+          <v-text-field
+            v-model="formData.fee"
+            label="Fee"
+            readonly
+          ></v-text-field>
+          <v-text-field
+            v-model="formData.interest"
+            label="Interest"
+            readonly
+          ></v-text-field>
+          <v-text-field
+            v-model="formData.duration"
+            label="Duration"
+            readonly
+          ></v-text-field>
+          <v-text-field
+            v-model="formData.rate"
+            readonly
+            label="Rate"
+          ></v-text-field>
+        </v-card-text>
+        <v-card-actions>
+          <v-btn color="success" @click="submitForm">Submit</v-btn>
+          <v-btn color="error" @click="closeDialog">Close</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
     <v-card
       class="selection mx-auto grey lighten-5 pa-1"
       style="max-height: 76vh; height: 76vh"
@@ -39,7 +106,6 @@
               dense
             ></v-text-field>
           </v-col>
-
           <v-col cols="7" v-if="diff_payment < 0 && !invoice_doc.is_return">
             <v-text-field
               outlined
@@ -71,13 +137,13 @@
           </v-col>
         </v-row>
         <v-divider></v-divider>
-
         <div v-if="is_cashback">
           <v-row
             class="pyments px-1 py-0"
-            v-for="payment in invoice_doc.payments"
+            v-for="(payment, index) in invoice_doc.payments"
             :key="payment.name"
           >
+            <!-- First Column -->
             <v-col cols="6" v-if="!is_mpesa_c2b_payment(payment)">
               <v-text-field
                 dense
@@ -96,27 +162,65 @@
                 :readonly="invoice_doc.is_return ? true : false"
               ></v-text-field>
             </v-col>
-            <v-col
-              v-if="!is_mpesa_c2b_payment(payment)"
-              :cols="
-                6
-                  ? (payment.type != 'Phone' ||
-                      payment.amount == 0 ||
-                      !request_payment_field) &&
-                    !is_mpesa_c2b_payment(payment)
-                  : 3
-              "
-            >
-              <v-btn
-                block
-                class=""
-                color="primary"
-                dark
-                @click="set_full_amount(payment.idx)"
-                >{{ payment.mode_of_payment }}</v-btn
-              >
+
+            <!-- Second Column and 2.2 Column -->
+            <v-col v-if="!is_mpesa_c2b_payment(payment)" cols="6">
+              <v-row>
+                <v-col
+                  :cols=" 9
+                  "
+                >
+                  <v-btn
+                    block
+                    class=""
+                    color="primary"
+                    dark
+                    @click="set_full_amount(payment.idx)"
+                  >
+                    {{ payment.mode_of_payment }}
+                  </v-btn>
+                </v-col>
+
+                 <!-- Fourth Column -->
+             <v-col
+                  v-if="
+                    payment.type == 'Phone' &&
+                    payment.amount > 0 &&
+                    request_payment_field
+                  "
+                  :cols="3"
+                >
+                
+              <v-btn block class="" color="success" dark :disabled="payment.amount == 0"
+                @click="(phone_dialog = true), (payment.amount = flt(payment.amount, 0))">
+                {{ __("Request") }}
+              </v-btn>
+          
+                </v-col>
+
+                               
+                <v-col v-if="index === 0" :cols="12">
+                  <v-btn
+                    block
+                    class=""
+                    color="success"
+                    dark
+                    @click="openDialog"
+                  >
+                    {{ __("Credit Pezesha") }}
+                  </v-btn>
+                </v-col>
+              </v-row>
             </v-col>
-            <v-col v-if="is_mpesa_c2b_payment(payment)" :cols="12" class="pl-3">
+
+            
+
+            <!-- Third Column -->
+            <v-col
+              v-if="['Mpesa-C2B- Mlango Nandi', '510008.99 - Mpesa-C2B Kimilili - VFL', '510008.100 - Mpesa-C2B Nandi Hill - VFL', 'Mpesa-C2B Webuye'].includes(payment.mode_of_payment)"
+              :cols="12"
+              class="pl-3"
+            >
               <v-btn
                 block
                 class=""
@@ -127,32 +231,67 @@
                 {{ __(`Get Payments ${payment.mode_of_payment}`) }}
               </v-btn>
             </v-col>
-            <v-col
-              v-if="
-                payment.type == 'Phone' &&
-                payment.amount > 0 &&
-                request_payment_field
-              "
-              :cols="3"
-              class="pl-1"
-            >
+          </v-row>
+
+          <!-- Credit Pezesha button -->
+          <v-row v-if="is_cashback">
+            <v-col cols="6">
+              <!-- Add your text field here -->
+              <v-text-field
+                v-model="formLoan.loan_amount"
+                color="primary"
+                :value="formtCurrency(pezesha_amount)"
+                :prefix="currencySymbol(pos_profile.currency)"
+                :label="frappe._('Loan Amount')"
+                readonly
+                dense
+                outlined
+                background-color="white"
+                hide-details
+              ></v-text-field>
+            </v-col>
+
+            <v-col cols="6">
+              <!-- Add your text field here -->
+              <v-text-field
+                v-model="formLoan.loan_id"
+                color="primary"
+                :label="frappe._('Loan Id')"
+                readonly
+                dense
+                outlined
+                background-color="white"
+                hide-details
+              ></v-text-field>
+            </v-col>
+            <v-col cols="6">
+              <!-- Add your text field here -->
+              <v-text-field
+                v-model="formLoan.loan_status"
+                color="primary"
+                :label="frappe._('Status')"
+                readonly
+                dense
+                outlined
+                background-color="white"
+                hide-details
+              ></v-text-field>
+            </v-col>
+
+            <v-col cols="6" class="text-left">
+              <!-- Adjusted class to align right -->
               <v-btn
                 block
-                class=""
+                class="pa-0"
                 color="success"
                 dark
-                :disabled="payment.amount == 0"
-                @click="
-                  (phone_dialog = true),
-                    (payment.amount = flt(payment.amount, 0))
-                "
+                @click="pezeshaLoanStatus"
               >
-                {{ __("Request") }}
+                {{ __("Pezesha Loan Status") }}
               </v-btn>
             </v-col>
           </v-row>
         </div>
-
         <v-row
           class="pyments px-1 py-0"
           v-if="
@@ -705,6 +844,23 @@ import format from "../../format";
 export default {
   mixins: [format],
   data: () => ({
+    dialogtitle: "",
+    dialogMessage: "",
+    dialognotSuccessful: false,
+    dialogSuccessful: false,
+    dialogVisible: false,
+    success: true,
+    message: "Thank you for your Loan Approval.",
+    formLoan: {
+      loan_amount: null,
+      loan_id: null,
+      loan_status: null,
+    },
+    formData: {
+      amount: 0,
+      rate: 0,
+      interest: 0,
+    },
     loading: false,
     pos_profile: "",
     invoice_doc: "",
@@ -731,6 +887,210 @@ export default {
   }),
 
   methods: {
+    openDialog() {
+      if (!this.invoice_doc.customer) {
+        evntBus.$emit("show_mesage", {
+          text: __(`There is no Customer!`),
+          color: "error",
+        });
+        return;
+      } else {
+        // Emit a freeze event to indicate that a process is in progress
+        evntBus.$emit("freeze", {
+          title: __("Please wait..."),
+        });
+
+        // Make the server call
+        frappe.call({
+          method:
+            "posawesome.posawesome.doctype.pezesha_settings.pezesha_settings.pezesha_loan_offer",
+          args: {
+            customer: this.invoice_doc.customer,
+            pos_profile: this.pos_profile.name,
+          },
+          callback: (r) => {
+            st = r.message;
+            dt = st.data;
+            if (st.status == 200) {
+              // Populate formData with fetched values
+              this.formData.pezesha_customer_id = this.invoice_doc.customer;
+              this.formData.pezesha_channel_id = this.pos_profile.name;
+              this.formData.amount = dt.amount;
+              this.formData.fee = dt.fee;
+              this.formData.interest = (dt.amount * dt.rate) / 100;
+              this.formData.duration = dt.duration;
+              this.formData.rate = dt.rate;
+              this.changeHandler(); // Call changeHandler after setting initial values
+              // Once the server call is completed, emit an unfreeze event
+              evntBus.$emit("unfreeze");
+              // Optionally, update dialog visibility or perform other actions
+              this.dialogVisible = true;
+            } else {
+              this.dialognotSuccessful = true;
+              evntBus.$emit("unfreeze");
+              if (st.status == 400 || st == 400) {
+                this.dialogtitle = "Invalid Merchant ID";
+                this.dialogMessage =
+                  "Loan offer request failed: The provided merchant ID is invalid. Please verify your merchant ID and try again.";
+              } else if (st.status == 404 || st == 404) {
+                this.dialogtitle = "Merchant not found";
+                this.dialogMessage = "Merchant not found.";
+              } else if (st.status == 503 || st == 503) {
+                this.dialogtitle = "Loan Offer Unavailable";
+                this.dialogMessage =
+                  "Loan offer request failed: Unable to retrieve loan offers at this time. Please try again later.";
+              } else if (st.status == 401 || st == 401) {
+                this.dialogtitle = "Missing Authorization Token";
+                this.dialogMessage =
+                  "The request does not include the required authorization token.";
+              }
+            }
+          },
+        });
+      }
+    },
+    changeHandler() {
+      // if(dt.amount >= this.formData.amount){
+      this.formData.interest =
+        (this.formData.amount * this.formData.rate) / 100;
+      // }else{
+      // frappe.throw("Please ensure that the input value does not exceed the loan amount limit.")
+      // }
+      // change of user input, do something
+    },
+    closeDialog() {
+      this.dialogVisible = false;
+    },
+    closeSuccessfulDialog() {
+      this.dialogSuccessful = false;
+    },
+    // pezeshaLoanStatus(){
+
+    //     },
+    pezeshaLoanStatus() {
+      evntBus.$emit("freeze", {
+        title: __("Please wait..."),
+      });
+      frappe.call({
+        method:
+          "posawesome.posawesome.doctype.pezesha_settings.pezesha_settings.pezesha_loan_status",
+        args: {
+          customer: this.invoice_doc.customer,
+          pos_profile: this.pos_profile.name,
+        },
+        callback: (r) => {
+          if (r.message) {
+            pez = r.message;
+            this.formLoan.loan_amount = pez.loan_amount;
+            this.formLoan.loan_id = pez.loan_id;
+            this.formLoan.loan_status = pez.status;
+            evntBus.$emit("unfreeze");
+          } else {
+            this.dialognotSuccessful = true;
+            evntBus.$emit("unfreeze");
+            if (st.status == 404 || st == 404) {
+              this.dialogtitle = "Loan Not Found";
+              this.dialogMessage =
+                "Loan status request failed: No loan found for the given identifier. Please verify your details and try again.";
+            } else if (st.status == 400 || st == 400) {
+              this.dialogtitle = "Invalid Loan Status Request";
+              this.dialogMessage =
+                "Loan status request failed: Invalid request parameters. Please ensure you provide a valid channel and identifier.";
+            } else if (st.status == 401 || st == 401) {
+              this.dialogtitle = "Authorization Token Missing";
+              this.dialogMessage =
+                "Loan status request failed: Missing authorization token. Please provide a valid token to retrieve loan status.";
+            }
+          }
+        },
+      });
+    },
+    closeNotSuccessfulDialog() {
+      this.dialognotSuccessful = false;
+    },
+    //  submitForm() {
+    //   if(this.invoice_doc.grand_total >= this.formData.amount){
+    //     frappe.call({
+    //      method: "posawesome.posawesome.doctype.pezesha_settings.pezesha_settings.pezesha_loan_application",
+    //       args: {
+    //         data: this.formData,
+    //        pos_profile: this.pos_profile.name,
+    //       },
+    //      callback: (r) => {
+    //         // Emit an unfreeze event after receiving the response
+    //        evntBus.$emit("unfreeze");
+    //        let s = r.message;
+    //         if (s.status == 200) {
+    //          this.dialogMessage = JSON.stringify(s);
+    //          this.dialogSuccessful = true;
+    //        } else {
+    //          this.dialognotSuccessful = true;
+    //        }
+    //      }
+    //     });
+
+    //   }else{
+    //     frappe.throw("Please ensure that the input value does not exceed the loan amount limit.")
+    //   }
+    //     // Here you can handle form submission
+    //     // Emit a freeze event to indicate that a process is in progress
+    //    evntBus.$emit("freeze", {
+    //      title: __("Please wait..."),
+    //     });
+
+    //     // Make the server call
+
+    //   },
+    submitForm() {
+      if (this.invoice_doc.grand_total >= this.formData.amount) {
+        // Here you can handle form submission
+        // Emit a freeze event to indicate that a process is in progress
+        evntBus.$emit("freeze", {
+          title: __("Please wait..."),
+        });
+        // Make the server call
+        frappe.call({
+          method:
+            "posawesome.posawesome.doctype.pezesha_settings.pezesha_settings.pezesha_loan_application",
+          args: {
+            data: this.formData,
+            pos_profile: this.pos_profile.name,
+          },
+          callback: (r) => {
+            // Emit an unfreeze event after receiving the response
+            evntBus.$emit("unfreeze");
+            let s = r.message;
+            if (s.status == 200) {
+              // this.dialogMessage = JSON.stringify(s);
+              this.dialogSuccessful = true;
+            } else {
+              this.dialognotSuccessful = true;
+              if (s.status == 403 || s == 403) {
+                this.dialogtitle = "Loan Application Denied";
+                this.dialogMessage =
+                  "Loan application failed: Your previous loan is yet to be fully paid or is overdue. Please settle outstanding dues to apply for a new loan.";
+              } else if (s.status == 400 || s == 400) {
+                this.dialogtitle = "Invalid Loan Amount";
+                this.dialogMessage =
+                  "Loan application failed: The requested loan amount exceeds your available credit limit. Please request a lower amount.";
+              }
+              // else if(st.status == 503 ){
+              //   dialogtitle = "Duplicate loan request";
+              //   dialogMessage = 'Kindly clear your previous loan before applying for a new Loan';
+              // }
+              // else if(st.status == 401){
+              //   dialogtitle = "Missing Authorization Token";
+              //   dialogMessage = 'The request does not include the required authorization token.';
+              // }
+            }
+            // Close the dialog after form submission
+            this.dialogVisible = false;
+          },
+        });
+      } else {
+        frappe.throw("Please ensure the input value matches the order amount.");
+      }
+    },
     back_to_invoice() {
       evntBus.$emit("show_payment", "false");
       evntBus.$emit("set_customer_readonly", false);
@@ -1248,6 +1608,10 @@ export default {
   },
 
   computed: {
+    formattedPezeshaAmount() {
+      // Assuming pezesha_amount is a computed property or data property
+      return this.formtCurrency(this.pezesha_amount);
+    },
     total_payments() {
       let total = parseFloat(this.invoice_doc.loyalty_amount);
       if (this.invoice_doc && this.invoice_doc.payments) {
